@@ -23,6 +23,7 @@ import griffon.core.GriffonApplication
 import griffon.util.Environment
 import griffon.util.Metadata
 import griffon.util.CallableWithArgs
+import griffon.util.ConfigUtils
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -47,8 +48,7 @@ final class JpaConnector implements JpaProvider {
     // ======================================================
 
     ConfigObject createConfig(GriffonApplication app) {
-        def configClass = app.class.classLoader.loadClass('JpaConfig')
-        return new ConfigSlurper(Environment.current.name).parse(configClass)
+        ConfigUtils.loadConfigWithI18n('JpaConfig')
     }
 
     private ConfigObject narrowConfig(ConfigObject config, String persistenceUnit) {

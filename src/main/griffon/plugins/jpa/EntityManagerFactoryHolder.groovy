@@ -48,7 +48,7 @@ class EntityManagerFactoryHolder implements JpaProvider {
 
     void setEntityManager(String persistenceUnit = 'default', Map<String, Object> entityManager) {
         if(isBlank(persistenceUnit)) persistenceUnit = 'default'
-        storeEntityManager(persistenceUnit, entityManager)       
+        storeEntityManager(persistenceUnit, entityManager)
     }
 
     Object withJpa(String persistenceUnit = 'default', Closure closure) {
@@ -81,7 +81,7 @@ class EntityManagerFactoryHolder implements JpaProvider {
     
     void disconnectEntityManager(String persistenceUnit) {
         if(isBlank(persistenceUnit)) persistenceUnit = 'default'
-        storeEntityManager(persistenceUnit, null)        
+        storeEntityManager(persistenceUnit, null)
     }
 
     private EntityManager openEntityManager(Map<String, Object> config) {

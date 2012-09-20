@@ -18,9 +18,9 @@
  */
 class JpaGriffonPlugin {
     // the plugin version
-    String version = '0.1'
+    String version = '0.2'
     // the version or versions of Griffon the plugin is designed for
-    String griffonVersion = '1.0.0 > *'
+    String griffonVersion = '1.1.0 > *'
     // the other plugins this plugin depends on
     Map dependsOn = [:]
     // resources that are included in plugin packaging
@@ -75,7 +75,7 @@ been configured as 'internal'
             withJpa('internal') { persistenceUnit, entityManager -> ... }
         }
     }
-    
+
 This method is also accessible to any component through the singleton `griffon.plugins.jpa.JpaConnector`.
 You can inject these methods to non-artifacts via metaclasses. Simply grab hold of a particular metaclass and call
 `JpaEnhancer.enhance(metaClassInstance, hibernateProviderInstance)`.
@@ -163,9 +163,9 @@ fails regardless of the arguments it receives
 
     class MyJpaProvider implements JpaProvider {
         Object withJpa(String persistenceUnit = 'default', Closure closure) { null }
-        public <T> T withJpa(String persistenceUnit = 'default', CallableWithArgs<T> callable) { null }      
+        public <T> T withJpa(String persistenceUnit = 'default', CallableWithArgs<T> callable) { null }
     }
-    
+
 This implementation may be used in the following way
 
     class MyServiceTests extends GriffonUnitTestCase {
