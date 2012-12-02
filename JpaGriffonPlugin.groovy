@@ -18,7 +18,7 @@
  */
 class JpaGriffonPlugin {
     // the plugin version
-    String version = '0.2'
+    String version = '0.2.1'
     // the version or versions of Griffon the plugin is designed for
     String griffonVersion = '1.1.0 > *'
     // the other plugins this plugin depends on
@@ -52,21 +52,23 @@ This plugin does NOT provide domain classes nor dynamic finders like GORM does.
 
 Usage
 -----
-Upon installation the plugin will generate the following artifacts in `$appdir/griffon-app/conf`:
+Upon installation the plugin will generate the following artifacts in
+`$appdir/griffon-app/conf`:
 
  * JpaConfig.groovy - contains the EntitiManager properties.
- * BootstrapJpa.groovy - defines init/destroy hooks for data to be manipulated during app startup/shutdown.
+ * BootstrapJpa.groovy - defines init/destroy hooks for data to be manipulated
+during app startup/shutdown.
 
 A new dynamic method named `withJpa` will be injected into all controllers,
-giving you access to a `javax.persistence.EntityManager` object, with which you'll be able
-to make calls to the database. Remember to make all database calls off the EDT
-otherwise your application may appear unresponsive when doing long computations
-inside the EDT.
+giving you access to a `javax.persistence.EntityManager` object, with which
+you'll be able to make calls to the database. Remember to make all database
+calls off the UI thread otherwise your application may appear unresponsive
+when doing long computations inside the UI thread.
 
-This method is aware of multiple databases. If no persistenceUnit is specified when calling
-it then the default database will be selected. Here are two example usages, the first
-queries against the default database while the second queries a database whose name has
-been configured as 'internal'
+This method is aware of multiple databases. If no persistenceUnit is specified
+when calling it then the default database will be selected. Here are two
+example usages, the first queries against the default database while the second
+queries a database whose name has been configured as 'internal'
 
     package sample
     class SampleController {
@@ -76,15 +78,19 @@ been configured as 'internal'
         }
     }
 
-This method is also accessible to any component through the singleton `griffon.plugins.jpa.JpaConnector`.
-You can inject these methods to non-artifacts via metaclasses. Simply grab hold of a particular metaclass and call
-`JpaEnhancer.enhance(metaClassInstance, hibernateProviderInstance)`.
+This method is also accessible to any component through the singleton
+`griffon.plugins.jpa.JpaConnector`. You can inject these methods to
+non-artifacts via metaclasses. Simply grab hold of a particular metaclass and
+call `JpaEnhancer.enhance(metaClassInstance, hibernateProviderInstance)`.
 
 Configuration
 -------------
+
 ### JPA Provider
-You must configure a suitable JPA provider for your application, this plugin will not define a default implementation for you.
-Here's an example setting up Eclipselink as a provider
+
+You must configure a suitable JPA provider for your application, this plugin
+will not define a default implementation for you. Here's an example setting up
+Eclipselink as a provider
 
 __griffon-app/conf/BuildConfig.groovy__
 
@@ -107,7 +113,8 @@ __griffon-app/conf/BuildConfig.groovy__
 ### Dynamic method injection
 
 The `withJpa()` dynamic method will be added to controllers by default. You can
-change this setting by adding a configuration flag in `griffon-app/conf/Config.groovy`
+change this setting by adding a configuration flag in
+`griffon-app/conf/Config.groovy`
 
     griffon.jpa.injectInto = ['controller', 'service']
 
@@ -115,17 +122,21 @@ change this setting by adding a configuration flag in `griffon-app/conf/Config.g
 
 The following events will be triggered by this addon
 
- * JpaConnectStart[config, persistenceUnit] - triggered before connecting to the database
- * JpaConnectEnd[persistenceUnit, entityManagerFactory] - triggered after connecting to the database
- * JpaDisconnectStart[config, persistenceUnit, entityManagerFactory] - triggered before disconnecting from the database
- * JpaDisconnectEnd[config, persistenceUnit] - triggered after disconnecting from the database
+ * JpaConnectStart[config, persistenceUnit] - triggered before connecting to
+   the database
+ * JpaConnectEnd[persistenceUnit, entityManagerFactory] - triggered after
+   connecting to the database
+ * JpaDisconnectStart[config, persistenceUnit, entityManagerFactory] - triggered
+   before disconnecting from the database
+ * JpaDisconnectEnd[config, persistenceUnit] - triggered after disconnecting
+   from the database
 
 ### Multiple Persistence Units
 
-The config file `JpaConfig.groovy` defines a default persistenceUnit block. As the name
-implies this is the persistenceUnit used by default, however you can configure named persistenceUnits
-by adding a new config block. For example connecting to a persistenceUnit whose name is 'internal'
-can be done in this way
+The config file `JpaConfig.groovy` defines a default persistenceUnit block. As
+the name implies this is the persistenceUnit used by default, however you can
+configure named persistenceUnits by adding a new config block. For example
+connecting to a persistenceUnit whose name is 'internal' can be done in this way
 
     persistenceUnits {
         internal {
@@ -147,9 +158,12 @@ A trivial sample application can be found at [https://github.com/aalmiray/griffo
 
 Testing
 -------
-The `withJpa()` dynamic method will not be automatically injected during unit testing, because addons are simply not initialized
-for this kind of tests. However you can use `JpaEnhancer.enhance(metaClassInstance, jpaProviderInstance)` where 
-`jpaProviderInstance` is of type `griffon.plugins.jpa.JpaProvider`. The contract for this interface looks like this
+
+The `withJpa()` dynamic method will _not_ be automatically injected during unit
+testing, because addons are simply not initialized for this kind of tests.
+However you can use `JpaEnhancer.enhance(metaClassInstance, jpaProviderInstance)`
+where  `jpaProviderInstance` is of type `griffon.plugins.jpa.JpaProvider`. The
+contract for this interface looks like this
 
     public interface JpaProvider {
         Object withJpa(Closure closure);
@@ -158,8 +172,9 @@ for this kind of tests. However you can use `JpaEnhancer.enhance(metaClassInstan
         <T> T withJpa(String persistenceUnit, CallableWithArgs<T> callable);
     }
 
-It's up to you define how these methods need to be implemented for your tests. For example, here's an implementation that never
-fails regardless of the arguments it receives
+It's up to you define how these methods need to be implemented for your tests.
+For example, here's an implementation that never fails regardless of the
+arguments it receives
 
     class MyJpaProvider implements JpaProvider {
         Object withJpa(String persistenceUnit = 'default', Closure closure) { null }
