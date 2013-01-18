@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,20 +24,21 @@ import org.slf4j.LoggerFactory
  * @author Andres Almiray
  */
 final class JpaEnhancer {
+    private static final String DEFAULT = 'default'
     private static final Logger LOG = LoggerFactory.getLogger(JpaEnhancer)
 
     private JpaEnhancer() {}
-
-    static void enhance(MetaClass mc, JpaProvider provider = EntityManagerFactoryHolder.instance) {
-        if (LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
+    
+    static void enhance(MetaClass mc, JpaProvider provider = DefaultJpaProvider.instance) {
+        if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withJpa = {Closure closure ->
-            provider.withJpa('default', closure)
+            provider.withJpa(DEFAULT, closure)
         }
         mc.withJpa << {String persistenceUnit, Closure closure ->
             provider.withJpa(persistenceUnit, closure)
         }
         mc.withJpa << {CallableWithArgs callable ->
-            provider.instance.withJpa('default', callable)
+            provider.withJpa(DEFAULT, callable)
         }
         mc.withJpa << {String persistenceUnit, CallableWithArgs callable ->
             provider.withJpa(persistenceUnit, callable)

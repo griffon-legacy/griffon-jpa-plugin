@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-package griffon.plugins.jpa;
-
-import griffon.util.CallableWithArgs;
-import groovy.lang.Closure;
+package dsld
 
 /**
  * @author Andres Almiray
  */
-public interface JpaProvider {
-    <R> R withJpa(Closure<R> closure);
 
-    <R> R withJpa(String persistenceUnit, Closure<R> closure);
-
-    <R> R withJpa(CallableWithArgs<R> callable);
-
-    <R> R withJpa(String persistenceUnit, CallableWithArgs<R> callable);
+contribute(enclosingClass(annotatedBy('griffon.plugins.jpa.JpaAware'))) {
+    provider = "Jpa DSL"
+    delegatesTo "griffon.plugins.jpa.JpaContributionHandler"
 }

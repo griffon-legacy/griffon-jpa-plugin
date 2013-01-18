@@ -22,7 +22,11 @@ import groovy.lang.Closure;
 /**
  * @author Andres Almiray
  */
-public interface JpaProvider {
+public interface JpaContributionHandler {
+    void setJpaProvider(JpaProvider provider);
+
+    JpaProvider getJpaProvider();
+
     <R> R withJpa(Closure<R> closure);
 
     <R> R withJpa(String persistenceUnit, Closure<R> closure);

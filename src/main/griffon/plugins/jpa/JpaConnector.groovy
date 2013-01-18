@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,40 +22,29 @@ import javax.persistence.EntityManagerFactory
 import griffon.core.GriffonApplication
 import griffon.util.Environment
 import griffon.util.Metadata
-import griffon.util.CallableWithArgs
 import griffon.util.ConfigUtils
-
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * @author Andres Almiray
  */
 @Singleton
-final class JpaConnector implements JpaProvider {
-    private static final Logger LOG = LoggerFactory.getLogger(JpaConnector)
+final class JpaConnector {
+    private static final String DEFAULT = 'default'
 
     private bootstrap
 
-    Object withJpa(String persistenceUnit = 'default', Closure closure) {
-        return EntityManagerFactoryHolder.instance.withJpa(persistenceUnit, closure)
-    }
-
-    public <T> T withJpa(String persistenceUnit = 'default', CallableWithArgs<T> callable) {
-        return EntityManagerFactoryHolder.instance.withJpa(persistenceUnit, callable)
-    }
-
-    // ======================================================
-
     ConfigObject createConfig(GriffonApplication app) {
-        ConfigUtils.loadConfigWithI18n('JpaConfig')
+        if (!app.config.pluginConfig.jpa) {
+            app.config.pluginConfig.jpa = ConfigUtils.loadConfigWithI18n('JpaConfig')
+        }
+        app.config.pluginConfig.jpa
     }
 
     private ConfigObject narrowConfig(ConfigObject config, String persistenceUnit) {
-        return persistenceUnit == 'default' ? config.persistenceUnit : config.persistenceUnits[persistenceUnit]
+        return persistenceUnit == DEFAULT ? config.persistenceUnit : config.persistenceUnits[persistenceUnit]
     }
 
-    Map<String, Object> connect(GriffonApplication app, ConfigObject config, String persistenceUnit = 'default') {
+    Map<String, Object> connect(GriffonApplication app, ConfigObject config, String persistenceUnit = DEFAULT) {
         if (EntityManagerFactoryHolder.instance.isEntityManagerConnected(persistenceUnit)) {
             return EntityManagerFactoryHolder.instance.getEntityManager(persistenceUnit)
         }
@@ -66,24 +55,36 @@ final class JpaConnector implements JpaProvider {
         EntityManagerFactoryHolder.instance.setEntityManager(persistenceUnit, emConfig)
         bootstrap = app.class.classLoader.loadClass('BootstrapJpa').newInstance()
         bootstrap.metaClass.app = app
-        EntityManagerFactoryHolder.instance.withJpa(persistenceUnit) { pu, em -> bootstrap.init(pu, em) }
+        resolveJpaProvider(app).withJpa(persistenceUnit) { pu, em -> bootstrap.init(pu, em) }
         app.event('JpaConnectEnd', [persistenceUnit, emConfig.factory])
         emConfig
     }
 
-    void disconnect(GriffonApplication app, ConfigObject config, String persistenceUnit = 'default') {
+    void disconnect(GriffonApplication app, ConfigObject config, String persistenceUnit = DEFAULT) {
         if (EntityManagerFactoryHolder.instance.isEntityManagerConnected(persistenceUnit)) {
             config = narrowConfig(config, persistenceUnit)
             Map<String, Object> emConfig = EntityManagerFactoryHolder.instance.getEntityManager(persistenceUnit)
             app.event('JpaDisconnectStart', [config, persistenceUnit, emConfig.factory])
-            EntityManagerFactoryHolder.instance.withJpa(persistenceUnit) { pu, em -> bootstrap.destroy(pu, em) }
+            resolveJpaProvider(app).withJpa(persistenceUnit) { pu, em -> bootstrap.destroy(pu, em) }
             destroyEntityManager(config, emConfig.factory)
             EntityManagerFactoryHolder.instance.disconnectEntityManager(persistenceUnit)
             app.event('JpaDisconnectEnd', [config, persistenceUnit])
         }
     }
 
-    Map<String, Object> createEntityManager(ConfigObject config, String persistenceUnit = 'default') {
+    JpaProvider resolveJpaProvider(GriffonApplication app) {
+        def jpaProvider = app.config.jpaProvider
+        if (jpaProvider instanceof Class) {
+            jpaProvider = jpaProvider.newInstance()
+            app.config.jpaProvider = jpaProvider
+        } else if (!jpaProvider) {
+            jpaProvider = DefaultJpaProvider.instance
+            app.config.jpaProvider = jpaProvider
+        }
+        jpaProvider
+    }
+
+    Map<String, Object> createEntityManager(ConfigObject config, String persistenceUnit = DEFAULT) {
         [
             factory: Persistence.createEntityManagerFactory(persistenceUnit, config.factory ?: [:]),
             entityManager: config.entityManager ?: [:]

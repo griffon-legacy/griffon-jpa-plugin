@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,85 +18,62 @@ package griffon.plugins.jpa
 
 import griffon.core.GriffonApplication
 import griffon.util.ApplicationHolder
-import griffon.util.CallableWithArgs
 import static griffon.util.GriffonNameUtils.isBlank
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
 import javax.persistence.EntityManagerFactory
-import javax.persistence.EntityManager
 
 /**
  * @author Andres Almiray
  */
-@Singleton
-class EntityManagerFactoryHolder implements JpaProvider {
-    private static final Logger LOG = LoggerFactory.getLogger(EntityManagerFactoryHolder)
+class EntityManagerFactoryHolder {
+    private static final String DEFAULT = 'default'
     private static final Object[] LOCK = new Object[0]
     private final Map<String, Map<String, Object>> factories = [:]
-  
+
+    private static final EntityManagerFactoryHolder INSTANCE
+
+    static {
+        INSTANCE = new EntityManagerFactoryHolder()
+    }
+
+    static EntityManagerFactoryHolder getInstance() {
+        INSTANCE
+    }
+
     String[] getPersistenceUnitNames() {
         List<String> persistenceUnits = new ArrayList().addAll(factories.keySet())
         persistenceUnits.toArray(new String[persistenceUnits.size()])
     }
 
-    Map<String, Object> getEntityManager(String persistenceUnit = 'default') {
-        if(isBlank(persistenceUnit)) persistenceUnit = 'default'
+    Map<String, Object> getEntityManager(String persistenceUnit = DEFAULT) {
+        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         retrieveEntityManager(persistenceUnit)
     }
 
-    void setEntityManager(String persistenceUnit = 'default', Map<String, Object> entityManager) {
-        if(isBlank(persistenceUnit)) persistenceUnit = 'default'
+    void setEntityManager(String persistenceUnit = DEFAULT, Map<String, Object> entityManager) {
+        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         storeEntityManager(persistenceUnit, entityManager)
     }
 
-    Object withJpa(String persistenceUnit = 'default', Closure closure) {
-        Map<String, Object> config = fetchEntityManager(persistenceUnit)
-        if(LOG.debugEnabled) LOG.debug("Executing statement on persistenceUnit '$persistenceUnit'")
-        EntityManager em = openEntityManager(config)
-        try {
-            return closure(persistenceUnit, em)
-        } finally {
-            em.close()
-        }
-    }
-
-    public <T> T withJpa(String persistenceUnit = 'default', CallableWithArgs<T> callable) {
-        Map<String, Object> config = fetchEntityManager(persistenceUnit)
-        if(LOG.debugEnabled) LOG.debug("Executing statement on persistenceUnit '$persistenceUnit'")
-        EntityManager em = openEntityManager(config)
-        try {
-            callable.args = [persistenceUnit, em] as Object[]
-            return callable.call()
-        } finally {
-            em.close()
-        }
-    }
-    
     boolean isEntityManagerConnected(String persistenceUnit) {
-        if(isBlank(persistenceUnit)) persistenceUnit = 'default'
+        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         retrieveEntityManager(persistenceUnit) != null
     }
-    
+
     void disconnectEntityManager(String persistenceUnit) {
-        if(isBlank(persistenceUnit)) persistenceUnit = 'default'
+        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         storeEntityManager(persistenceUnit, null)
     }
 
-    private EntityManager openEntityManager(Map<String, Object> config) {
-        config.factory.createEntityManager(config.entityManager)
-    }
-
-    private Map<String, Object> fetchEntityManager(String persistenceUnit) {
-        if(isBlank(persistenceUnit)) persistenceUnit = 'default'
+    Map<String, Object> getEntityManagerConfiguration(String persistenceUnit) {
+        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         Map<String, Object> emConfig = retrieveEntityManager(persistenceUnit)
         if(emConfig == null) {
             GriffonApplication app = ApplicationHolder.application
             ConfigObject config = JpaConnector.instance.createConfig(app)
             emConfig = JpaConnector.instance.connect(app, config, persistenceUnit)
         }
-        
+
         if(emConfig == null) {
             throw new IllegalArgumentException("No such EntityManager configuration for name $persistenceUnit")
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
  */
 class JpaGriffonPlugin {
     // the plugin version
-    String version = '0.2.1'
+    String version = '1.0.0'
     // the version or versions of Griffon the plugin is designed for
-    String griffonVersion = '1.1.0 > *'
+    String griffonVersion = '1.2.0 > *'
     // the other plugins this plugin depends on
-    Map dependsOn = [:]
+    Map dependsOn = [lombok: '0.4']
     // resources that are included in plugin packaging
     List pluginIncludes = []
     // the plugin license
@@ -78,13 +78,26 @@ queries a database whose name has been configured as 'internal'
         }
     }
 
-This method is also accessible to any component through the singleton
+The following list enumerates all the variants of the injected method
+
+ * `<R> R withJpa(Closure<R> stmts)`
+ * `<R> R withJpa(CallableWithArgs<R> stmts)`
+ * `<R> R withJpa(String jpaServerName, Closure<R> stmts)`
+ * `<R> R withJpa(String jpaServerName, CallableWithArgs<R> stmts)`
+
+These methods are also accessible to any component through the singleton
 `griffon.plugins.jpa.JpaConnector`. You can inject these methods to
 non-artifacts via metaclasses. Simply grab hold of a particular metaclass and
-call `JpaEnhancer.enhance(metaClassInstance, hibernateProviderInstance)`.
+call `JpaEnhancer.enhance(metaClassInstance, jpaProviderInstance)`.
 
 Configuration
 -------------
+### JpaAware AST Transformation
+
+The preferred way to mark a class for method injection is by annotating it with
+`@griffon.plugins.jpa.JpaAware`. This transformation injects the
+`griffon.plugins.jpa.JpaContributionHandler` interface and default
+behavior that fulfills the contract.
 
 ### JPA Provider
 
@@ -112,11 +125,13 @@ __griffon-app/conf/BuildConfig.groovy__
 
 ### Dynamic method injection
 
-The `withJpa()` dynamic method will be added to controllers by default. You can
-change this setting by adding a configuration flag in
-`griffon-app/conf/Config.groovy`
+Dynamic methods will be added to controllers by default. You can
+change this setting by adding a configuration flag in `griffon-app/conf/Config.groovy`
 
     griffon.jpa.injectInto = ['controller', 'service']
+
+Dynamic method injection will be skipped for classes implementing
+`griffon.plugins.jpa.JpaContributionHandler`.
 
 ### Events
 
@@ -159,17 +174,17 @@ A trivial sample application can be found at [https://github.com/aalmiray/griffo
 Testing
 -------
 
-The `withJpa()` dynamic method will _not_ be automatically injected during unit
-testing, because addons are simply not initialized for this kind of tests.
-However you can use `JpaEnhancer.enhance(metaClassInstance, jpaProviderInstance)`
-where  `jpaProviderInstance` is of type `griffon.plugins.jpa.JpaProvider`. The
-contract for this interface looks like this
+Dynamic methods will not be automatically injected during unit testing, because
+addons are simply not initialized for this kind of tests. However you can use
+`JpaEnhancer.enhance(metaClassInstance, jpaProviderInstance)` where
+`jpaProviderInstance` is of type `griffon.plugins.jpa.JpaProvider`.
+The contract for this interface looks like this
 
     public interface JpaProvider {
-        Object withJpa(Closure closure);
-        Object withJpa(String persistenceUnit, Closure closure);
-        <T> T withJpa(CallableWithArgs<T> callable);
-        <T> T withJpa(String persistenceUnit, CallableWithArgs<T> callable);
+        <R> R withJpa(Closure<R> closure);
+        <R> R withJpa(CallableWithArgs<R> callable);
+        <R> R withJpa(String persistenceUnit, Closure<R> closure);
+        <R> R withJpa(String persistenceUnit, CallableWithArgs<R> callable);
     }
 
 It's up to you define how these methods need to be implemented for your tests.
@@ -177,8 +192,10 @@ For example, here's an implementation that never fails regardless of the
 arguments it receives
 
     class MyJpaProvider implements JpaProvider {
-        Object withJpa(String persistenceUnit = 'default', Closure closure) { null }
-        public <T> T withJpa(String persistenceUnit = 'default', CallableWithArgs<T> callable) { null }
+        public <R> R withJpa(Closure<R> closure) { null }
+        public <R> R withJpa(CallableWithArgs<R> callable) { null }
+        public <R> R withJpa(String persistenceUnit, Closure<R> closure) { null }
+        public <R> R withJpa(String persistenceUnit, CallableWithArgs<R> callable) { null }
     }
 
 This implementation may be used in the following way
@@ -191,8 +208,94 @@ This implementation may be used in the following way
         }
     }
 
+On the other hand, if the service is annotated with `@JpaAware` then usage
+of `JpaEnhancer` should be avoided at all costs. Simply set `jpaProviderInstance`
+on the service instance directly, like so, first the service definition
+
+    @griffon.plugins.jpa.JpaAware
+    class MyService {
+        def serviceMethod() { ... }
+    }
+
+Next is the test
+
+    class MyServiceTests extends GriffonUnitTestCase {
+        void testSmokeAndMirrors() {
+            MyService service = new MyService()
+            service.jpaProvider = new MyJpaProvider()
+            // exercise service methods
+        }
+    }
+
+Tool Support
+------------
+
+### DSL Descriptors
+
+This plugin provides DSL descriptors for Intellij IDEA and Eclipse (provided
+you have the Groovy Eclipse plugin installed). These descriptors are found
+inside the `griffon-jpa-compile-x.y.z.jar`, with locations
+
+ * dsdl/jpa.dsld
+ * gdsl/jpa.gdsl
+
+### Lombok Support
+
+Rewriting Java AST in a similar fashion to Groovy AST transformations is
+possible thanks to the [lombok][3] plugin.
+
+#### JavaC
+
+Support for this compiler is provided out-of-the-box by the command line tools.
+There's no additional configuration required.
+
+#### Eclipse
+
+Follow the steps found in the [Lombok][3] plugin for setting up Eclipse up to
+number 5.
+
+ 6. Go to the path where the `lombok.jar` was copied. This path is either found
+    inside the Eclipse installation directory or in your local settings. Copy
+    the following file from the project's working directory
+
+         $ cp $USER_HOME/.griffon/<version>/projects/<project>/plugins/jpa-<version>/dist/griffon-jpa-compile-<version>.jar .
+
+ 6. Edit the launch script for Eclipse and tweak the boothclasspath entry so
+    that includes the file you just copied
+
+        -Xbootclasspath/a:lombok.jar:lombok-pg-<version>.jar:\
+        griffon-lombok-compile-<version>.jar:griffon-jpa-compile-<version>.jar
+
+ 7. Launch Eclipse once more. Eclipse should be able to provide content assist
+    for Java classes annotated with `@JpaAware`.
+
+#### NetBeans
+
+Follow the instructions found in [Annotation Processors Support in the NetBeans
+IDE, Part I: Using Project Lombok][4]. You may need to specify
+`lombok.core.AnnotationProcessor` in the list of Annotation Processors.
+
+NetBeans should be able to provide code suggestions on Java classes annotated
+with `@JpaAware`.
+
+#### Intellij IDEA
+
+Follow the steps found in the [Lombok][3] plugin for setting up Intellij IDEA
+up to number 5.
+
+ 6. Copy `griffon-jpa-compile-<version>.jar` to the `lib` directory
+
+         $ pwd
+           $USER_HOME/Library/Application Support/IntelliJIdea11/lombok-plugin
+         $ cp $USER_HOME/.griffon/<version>/projects/<project>/plugins/jpa-<version>/dist/griffon-jpa-compile-<version>.jar lib
+
+ 7. Launch IntelliJ IDEA once more. Code completion should work now for Java
+    classes annotated with `@JpaAware`.
+
 
 [1]: http://docs.oracle.com/javaee/6/api/javax/persistence/package-summary.html
 [2]: https://github.com/aalmiray/griffon_sample_apps/tree/master/persistence/jpa
+[3]: /plugin/lombok
+[4]: http://netbeans.org/kb/docs/java/annotations-lombok.html
 '''
 }
