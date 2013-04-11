@@ -46,35 +46,35 @@ class EntityManagerFactoryHolder {
     }
 
     Map<String, Object> getEntityManager(String persistenceUnit = DEFAULT) {
-        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
+        if (isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         retrieveEntityManager(persistenceUnit)
     }
 
     void setEntityManager(String persistenceUnit = DEFAULT, Map<String, Object> entityManager) {
-        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
+        if (isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         storeEntityManager(persistenceUnit, entityManager)
     }
 
     boolean isEntityManagerConnected(String persistenceUnit) {
-        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
+        if (isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         retrieveEntityManager(persistenceUnit) != null
     }
 
     void disconnectEntityManager(String persistenceUnit) {
-        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
+        if (isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         storeEntityManager(persistenceUnit, null)
     }
 
     Map<String, Object> getEntityManagerConfiguration(String persistenceUnit) {
-        if(isBlank(persistenceUnit)) persistenceUnit = DEFAULT
+        if (isBlank(persistenceUnit)) persistenceUnit = DEFAULT
         Map<String, Object> emConfig = retrieveEntityManager(persistenceUnit)
-        if(emConfig == null) {
+        if (emConfig == null) {
             GriffonApplication app = ApplicationHolder.application
             ConfigObject config = JpaConnector.instance.createConfig(app)
             emConfig = JpaConnector.instance.connect(app, config, persistenceUnit)
         }
 
-        if(emConfig == null) {
+        if (emConfig == null) {
             throw new IllegalArgumentException("No such EntityManager configuration for name $persistenceUnit")
         }
         emConfig

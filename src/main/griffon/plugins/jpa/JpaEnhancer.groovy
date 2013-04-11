@@ -30,7 +30,7 @@ final class JpaEnhancer {
     private JpaEnhancer() {}
     
     static void enhance(MetaClass mc, JpaProvider provider = DefaultJpaProvider.instance) {
-        if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
+        if (LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withJpa = {Closure closure ->
             provider.withJpa(DEFAULT, closure)
         }

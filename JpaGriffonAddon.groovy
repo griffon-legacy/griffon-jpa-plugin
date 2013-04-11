@@ -20,13 +20,17 @@ import griffon.plugins.jpa.JpaConnector
 import griffon.plugins.jpa.JpaEnhancer
 import griffon.plugins.jpa.JpaContributionHandler
 
+import static griffon.util.ConfigUtils.getConfigValueAsBoolean
+
 /**
  * @author Andres Almiray
  */
 class JpaGriffonAddon {
     void addonPostInit(GriffonApplication app) {
         ConfigObject config = JpaConnector.instance.createConfig(app)
-        JpaConnector.instance.connect(app, config)
+        if (getConfigValueAsBoolean(app.config, 'griffon.jpa.connect.onstartup', true)) {
+            JpaConnector.instance.connect(app, config)
+        }
         def types = app.config.griffon?.jpa?.injectInto ?: ['controller']
         for(String type : types) {
             for(GriffonClass gc : app.artifactManager.getClassesOfType(type)) {

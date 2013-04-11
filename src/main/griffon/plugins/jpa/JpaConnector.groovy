@@ -41,7 +41,12 @@ final class JpaConnector {
     }
 
     private ConfigObject narrowConfig(ConfigObject config, String persistenceUnit) {
-        return persistenceUnit == DEFAULT ? config.persistenceUnit : config.persistenceUnits[persistenceUnit]
+        if (config.containsKey('persistenceUnit') && persistenceUnit == DEFAULT) {
+            return config.persistenceUnit
+        } else if (config.containsKey('persistenceUnits')) {
+            return config.persistenceUnits[persistenceUnit]
+        }
+        return config
     }
 
     Map<String, Object> connect(GriffonApplication app, ConfigObject config, String persistenceUnit = DEFAULT) {
