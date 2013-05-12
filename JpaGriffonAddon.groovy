@@ -27,10 +27,7 @@ import static griffon.util.ConfigUtils.getConfigValueAsBoolean
  */
 class JpaGriffonAddon {
     void addonPostInit(GriffonApplication app) {
-        ConfigObject config = JpaConnector.instance.createConfig(app)
-        if (getConfigValueAsBoolean(app.config, 'griffon.jpa.connect.onstartup', true)) {
-            JpaConnector.instance.connect(app, config)
-        }
+        JpaConnector.instance.createConfig(app)
         def types = app.config.griffon?.jpa?.injectInto ?: ['controller']
         for(String type : types) {
             for(GriffonClass gc : app.artifactManager.getClassesOfType(type)) {
@@ -41,8 +38,14 @@ class JpaGriffonAddon {
     }
 
     Map events = [
+        LoadAddonsEnd: { app, addons ->
+            if (getConfigValueAsBoolean(app.config, 'griffon.jpa.connect.onstartup', true)) {
+                ConfigObject config = JpaConnector.instance.createConfig(app)
+                JpaConnector.instance.connect(app, config)
+            }
+        },
         ShutdownStart: { app ->
-        ConfigObject config = JpaConnector.instance.createConfig(app)
+            ConfigObject config = JpaConnector.instance.createConfig(app)
             JpaConnector.instance.disconnect(app, config)
         }
     ]

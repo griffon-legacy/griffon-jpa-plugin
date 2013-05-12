@@ -34,6 +34,8 @@ public class DefaultJpaProvider extends AbstractJpaProvider {
         return INSTANCE;
     }
 
+    private DefaultJpaProvider() {}
+
     @Override
     protected EntityManager getEntityManager(String persistenceUnit) {
         final Map<String, Object> config = EntityManagerFactoryHolder.getInstance().getEntityManagerConfiguration(persistenceUnit);

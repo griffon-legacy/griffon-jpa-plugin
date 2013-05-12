@@ -40,6 +40,8 @@ class EntityManagerFactoryHolder {
         INSTANCE
     }
 
+    private EntityManagerFactoryHolder() {}
+
     String[] getPersistenceUnitNames() {
         List<String> persistenceUnits = new ArrayList().addAll(factories.keySet())
         persistenceUnits.toArray(new String[persistenceUnits.size()])
